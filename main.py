@@ -5,7 +5,7 @@ import serial.tools.list_ports
 from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QComboBox, QPushButton, QTextEdit, QLabel, QLineEdit,
                              QCheckBox, QMessageBox, QGroupBox)
-from PyQt6.QtCore import QThread, pyqtSignal, QSettings, Qt
+from PyQt6.QtCore import QThread, pyqtSignal, QSettings, Qt, QTime
 
 
 AUTHOR = "TerOl&MiniMaxM25"
@@ -48,6 +48,7 @@ class ComTerminal(QWidget):
         self.reader = None
         self.current_port = None
         self.settings = QSettings("ComTerminal", "settings")
+        self.new_data = 1
         self.init_ui()
         self.load_settings()
         self.refresh_ports()
@@ -227,16 +228,28 @@ class ComTerminal(QWidget):
     def on_data_received(self, data):
         if isinstance(data, bytes):
             if self.byte_check.isChecked():
-                byte_str = ' '.join(f'{b:02X}' for b in data)
-                self.received_edit.insertPlainText('0x' + byte_str + ' ')
+                for b in data:
+                    #if self.new_data == 1:
+                        #timestamp = QTime.currentTime().toString("hh:mm:ss:zzz")
+                        #self.received_edit.insertPlainText(f"[{timestamp}]")
+                        #self.new_data = 0
+                    self.received_edit.insertPlainText('0x'+f'{b:02X} ')
+                    #if b == 0x0A:
+                     #   self.new_data = 1
             else:
                 try:
                     text = data.decode('utf-8', errors='replace')
                 except:
                     text = data.hex()
-                self.received_edit.insertPlainText(text)
-        else:
-            self.received_edit.insertPlainText(data)
+
+                for char in text:
+                    if self.new_data == 1:
+                        timestamp = QTime.currentTime().toString("hh:mm:ss:zzz")
+                        self.received_edit.insertPlainText(f"[{timestamp}]")
+                        self.new_data = 0
+                    self.received_edit.insertPlainText(char)
+                    if char == '\n':
+                        self.new_data = 1
         if self.autoscroll_check.isChecked():
             self.received_edit.verticalScrollBar().setValue(
                 self.received_edit.verticalScrollBar().maximum()
@@ -254,7 +267,7 @@ class ComTerminal(QWidget):
         try:
             data_bytes = data.encode('utf-8')
             if self.send_crlf_check.isChecked():
-                data_bytes += b'\r\n'
+                data_bytes += b'\n'
             self.reader.serial_port.write(data_bytes)
             self.reader.serial_port.flush()
         except Exception as e:
