@@ -63,16 +63,23 @@ class ComTerminal(QWidget):
 
         port_layout = QHBoxLayout()
         self.port_combo = QComboBox()
-        self.port_combo.setFixedWidth(200)
+        self.port_combo.setFixedWidth(100)
+        self.port_combo.setStyleSheet("QComboBox { border: 1px solid gray; border-radius: 3px; padding:2px}")
 
         self.baud_edit = QLineEdit("9600")
         self.baud_edit.setFixedWidth(80)
+        self.baud_edit.setStyleSheet("QLineEdit { border: 1px solid gray; border-radius: 3px; padding:2px}")
 
         self.refresh_btn = QPushButton("Refresh")
         self.refresh_btn.clicked.connect(self.refresh_ports)
+        self.refresh_btn.setStyleSheet("QPushButton { border: 1px solid gray; border-radius: 3px; padding:2px; cursor: pointer; }")
+        self.refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
         self.connect_btn = QPushButton("Connect")
         self.connect_btn.clicked.connect(self.connect_port)
+        self.connect_btn.setStyleSheet("QPushButton { border: 1px solid gray; border-radius: 3px; padding:2px; cursor: pointer; }")
+        self.connect_btn.setToolTip("Disconnected. Click to connect.")
+        self.connect_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
         port_layout.addWidget(QLabel("COM Port:"))
         port_layout.addWidget(self.port_combo)
@@ -85,7 +92,7 @@ class ComTerminal(QWidget):
         main_layout.addLayout(port_layout)
 
         received_group = QGroupBox("Received data:")
-        received_group.setStyleSheet("QGroupBox { font-weight: bold; } QGroupBox { border: 2px solid gray; margin-top: 10px; padding-top: 10px; border-radius: 3px;}")
+        received_group.setStyleSheet("QGroupBox { border: 1px solid gray; padding-top: 10px; border-radius: 3px;}")
         received_layout = QVBoxLayout()
         received_controls_layout = QHBoxLayout()
         self.autoscroll_check = QCheckBox("autoscroll")
@@ -99,9 +106,14 @@ class ComTerminal(QWidget):
 
         self.clear_rx_btn = QPushButton("Clear")
         self.clear_rx_btn.clicked.connect(self.clear_received)
+        self.clear_rx_btn.setStyleSheet("QPushButton { border: 1px solid gray; border-radius: 3px; padding:2px; cursor: pointer; }")
+        self.clear_rx_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
         self.save_rx_btn = QPushButton("Save to file")
         self.save_rx_btn.clicked.connect(self.save_received)
+        self.save_rx_btn.setStyleSheet("QPushButton { border: 1px solid gray; border-radius: 3px; padding:2px; cursor: pointer; }")
+        self.save_rx_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+
 
         received_controls_layout.addWidget(self.autoscroll_check)
         received_controls_layout.addWidget(self.byte_check)
@@ -114,14 +126,14 @@ class ComTerminal(QWidget):
 
         self.received_edit = QTextEdit()
         self.received_edit.setReadOnly(True)
-        self.received_edit.setStyleSheet("QTextEdit { background-color: black; color: white; }")
+        self.received_edit.setStyleSheet("QTextEdit { background-color: black; color: white; border-radius: 3px;}")
         received_layout.addWidget(self.received_edit)
 
         received_group.setLayout(received_layout)
         main_layout.addWidget(received_group)
 
         send_group = QGroupBox("Data to send:")
-        send_group.setStyleSheet("QGroupBox { font-weight: bold; } QGroupBox { border: 2px solid gray; margin-top: 10px; padding-top: 10px; border-radius: 3px; max-height: 150px; }")
+        send_group.setStyleSheet("QGroupBox { border: 1px solid gray; padding-top:10px; border-radius: 3px; max-height: 150px; }")
         send_layout = QVBoxLayout()
         send_group.setCheckable(True)
         send_group.setChecked(True)
@@ -129,13 +141,15 @@ class ComTerminal(QWidget):
 
         self.send_edit = QTextEdit()
         self.send_edit.setFixedHeight(80)
-        self.send_edit.setStyleSheet("QTextEdit { background-color: black; color: white; }")
+        self.send_edit.setStyleSheet("QTextEdit { background-color: black; color: white; border-radius: 3px;}")
         self.send_edit.textChanged.connect(self.on_text_changed)
         send_layout.addWidget(self.send_edit)
 
         checkbox_layout = QHBoxLayout()
         self.send_imm_check = QCheckBox("send imm")
-        self.send_crlf_check = QCheckBox("send \\r\\n")
+        self.send_imm_check.setToolTip("Send data immediately as you type")
+        self.send_crlf_check = QCheckBox("send \\n")
+        self.send_crlf_check.setToolTip("Send newline character when Send button is clicked")
         self.send_crlf_check.setChecked(True)
         checkbox_layout.addWidget(self.send_imm_check)
         checkbox_layout.addWidget(self.send_crlf_check)
@@ -146,9 +160,12 @@ class ComTerminal(QWidget):
         btn_layout = QHBoxLayout()
         self.send_btn = QPushButton("Send")
         self.send_btn.clicked.connect(self.send_data)
-
+        self.send_btn.setStyleSheet("QPushButton { border: 1px solid gray; border-radius: 3px; padding:2px; cursor: pointer; }")
+        self.send_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.clear_tx_btn = QPushButton("Clear")
         self.clear_tx_btn.clicked.connect(self.clear_input)
+        self.clear_tx_btn.setStyleSheet("QPushButton { border: 1px solid gray; border-radius: 3px; padding:2px; cursor: pointer; }")
+        self.clear_tx_btn.setCursor(Qt.CursorShape.PointingHandCursor)
 
         btn_layout.addWidget(self.send_btn)
         btn_layout.addWidget(self.clear_tx_btn)
@@ -236,7 +253,10 @@ class ComTerminal(QWidget):
         if self.reader and self.reader.isRunning():
             self.reader.stop()
             self.reader = None
-            self.connect_btn.setText("Connect")
+            self.connect_btn.setText("Disconnected")
+            self.connect_btn.setToolTip("Disconnected. Click to connect.")
+            self.connect_btn.setStyleSheet("""QPushButton { background-color: red; color: white; border: 1px solid red; border-radius: 3px; padding:2px;}
+                                           QPushButton:hover { background-color: red; border: 2px solid red;}""")
             return
 
         try:
@@ -244,7 +264,11 @@ class ComTerminal(QWidget):
             self.reader = SerialReader(port_name, baudrate)
             self.reader.data_received.connect(self.on_data_received)
             self.reader.start()
-            self.connect_btn.setText("Disconnect")
+            self.connect_btn.setText("Connected")
+            self.connect_btn.setToolTip("Connected. Click to disconnect.")
+            self.connect_btn.setStyleSheet("""QPushButton { background-color: green; color: white; border: 1px solid green; border-radius: 3px; padding:2px;}
+                                           QPushButton:hover { background-color: green; border: 2px solid green;}""")
+            
         except Exception as e:
             self.received_edit.insertPlainText(f"Error: {e}\n")
 
