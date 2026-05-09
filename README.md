@@ -1,2 +1,2 @@
-# COM_terminal_pyqt
-COM port terminal using PyQT
+#build command
+python -m PyInstaller --onefile -w --name COM_Terminal main.py
