@@ -4,7 +4,7 @@ import serial
 import serial.tools.list_ports
 from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QComboBox, QPushButton, QTextEdit, QLabel, QLineEdit,
-                             QCheckBox, QMessageBox, QGroupBox)
+                             QCheckBox, QMessageBox, QGroupBox, QFileDialog)
 from PyQt6.QtCore import QThread, pyqtSignal, QSettings, Qt, QTime
 
 
@@ -94,12 +94,20 @@ class ComTerminal(QWidget):
         self.byte_check = QCheckBox("byte")
         self.byte_check.setChecked(False)
 
+        self.time_show_check = QCheckBox("show time")
+        self.time_show_check.setChecked(False)
+
         self.clear_rx_btn = QPushButton("Clear")
         self.clear_rx_btn.clicked.connect(self.clear_received)
 
+        self.save_rx_btn = QPushButton("Save to file")
+        self.save_rx_btn.clicked.connect(self.save_received)
+
         received_controls_layout.addWidget(self.autoscroll_check)
         received_controls_layout.addWidget(self.byte_check)
+        received_controls_layout.addWidget(self.time_show_check)
         received_controls_layout.addWidget(self.clear_rx_btn)
+        received_controls_layout.addWidget(self.save_rx_btn)
         received_controls_layout.addStretch()
 
         received_layout.addLayout(received_controls_layout)
@@ -115,6 +123,10 @@ class ComTerminal(QWidget):
         send_group = QGroupBox("Data to send:")
         send_group.setStyleSheet("QGroupBox { font-weight: bold; } QGroupBox { border: 2px solid gray; margin-top: 10px; padding-top: 10px; border-radius: 3px; max-height: 150px; }")
         send_layout = QVBoxLayout()
+        send_group.setCheckable(True)
+        send_group.setChecked(True)
+        send_group.toggled.connect(lambda checked: self._toggle_send_group(checked))
+
         self.send_edit = QTextEdit()
         self.send_edit.setFixedHeight(80)
         self.send_edit.setStyleSheet("QTextEdit { background-color: black; color: white; }")
@@ -164,7 +176,10 @@ class ComTerminal(QWidget):
         
         autoscroll = self.settings.value("autoscroll", "true")
         self.autoscroll_check.setChecked(autoscroll.lower() == "true")
-        
+
+        time_show = self.settings.value("time_show", "true")
+        self.time_show_check.setChecked(time_show.lower() == "true")
+
         send_imm = self.settings.value("send_imm", "false")
         self.send_imm_check.setChecked(send_imm.lower() == "true")
         
@@ -174,8 +189,16 @@ class ComTerminal(QWidget):
     def save_settings(self):
         self.settings.setValue("baudrate", self.baud_edit.text())
         self.settings.setValue("autoscroll", str(self.autoscroll_check.isChecked()).lower())
+        self.settings.setValue("time_show", str(self.time_show_check.isChecked()).lower())
         self.settings.setValue("send_imm", str(self.send_imm_check.isChecked()).lower())
         self.settings.setValue("send_crlf", str(self.send_crlf_check.isChecked()).lower())
+
+    def _toggle_send_group(self, checked):
+        self.send_edit.setVisible(checked)
+        self.send_imm_check.setVisible(checked)
+        self.send_crlf_check.setVisible(checked)
+        self.send_btn.setVisible(checked)
+        self.clear_tx_btn.setVisible(checked)
 
     def on_text_changed(self):
         if self.send_imm_check.isChecked():
@@ -244,9 +267,10 @@ class ComTerminal(QWidget):
 
                 for char in text:
                     if self.new_data == 1:
-                        timestamp = QTime.currentTime().toString("hh:mm:ss:zzz")
-                        self.received_edit.insertPlainText(f"[{timestamp}]")
-                        self.new_data = 0
+                        if self.time_show_check.isChecked():
+                            timestamp = QTime.currentTime().toString("hh:mm:ss:zzz")
+                            self.received_edit.insertPlainText(f"[{timestamp}]")
+                            self.new_data = 0
                     self.received_edit.insertPlainText(char)
                     if char == '\n':
                         self.new_data = 1
@@ -278,6 +302,19 @@ class ComTerminal(QWidget):
 
     def clear_received(self):
         self.received_edit.clear()
+
+    def save_received(self):
+        try:
+            import datetime
+            filename = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S") + ".txt"
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "Save Received Data", filename, "Text Files (*.txt)"
+            )
+            if file_path:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(self.received_edit.toPlainText())
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to save file: {e}")
 
     def closeEvent(self, event):
         if self.reader and self.reader.isRunning():
