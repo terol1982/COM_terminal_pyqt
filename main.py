@@ -6,8 +6,7 @@ from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
                              QComboBox, QPushButton, QTextEdit, QLabel, QLineEdit,
                              QCheckBox, QMessageBox, QGroupBox)
 from PyQt6.QtCore import QThread, pyqtSignal, QSettings, Qt
-from PyQt6.QtGui import QPen, QColor
-from PyQt6 import QtCore
+
 
 AUTHOR = "TerOl&MiniMaxM25"
 VERSION = "1.0.0"
@@ -33,7 +32,7 @@ class SerialReader(QThread):
                     self.data_received.emit(data)
                 QThread.msleep(10)
         except Exception as e:
-            self.data_received.emit(f"Error: {e}\n")
+            self.data_received.emit(f"Error: {e}\n".encode('utf-8'))
         finally:
             if self.serial_port and self.serial_port.is_open:
                 self.serial_port.close()
@@ -185,7 +184,7 @@ class ComTerminal(QWidget):
                 self.send_immediate(last_char)
 
     def send_immediate(self, char: str):
-        if not self.reader or not self.reader.isRunning():
+        if not self.reader or not self.reader.isRunning() or not self.reader.serial_port:
             return
 
         try:
@@ -244,7 +243,7 @@ class ComTerminal(QWidget):
             )
 
     def send_data(self):
-        if not self.reader or not self.reader.isRunning():
+        if not self.reader or not self.reader.isRunning() or not self.reader.serial_port:
             self.received_edit.insertPlainText("Error: Not connected\n")
             return
 
