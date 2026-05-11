@@ -18,28 +18,30 @@
 ### Visual Design
 - **Background**: Default Qt style
 - **Text fields (Received/Send)**: Black background with white text
-- **Group boxes**: 2px solid gray border with rounded corners
+- **Group boxes**: 1px solid gray border with rounded corners
 - **Font**: Default system font
 - **Spacing**: 10px between elements
 
 ### Components
 
 1. **COM Port Selection Area** (horizontal layout)
-   - QComboBox for COM port selection (width: 200px)
+   - QComboBox for COM port selection (width: 100px)
    - QLineEdit for baud rate (default: 9600, width: 80px)
-   - QPushButton "Refresh"
-   - QPushButton "Connect/Disconnect"
+   - QPushButton "Refresh" (disabled when connected)
+   - QPushButton "Connect/Disconnect" (red=disconnected, green=connected)
 
 2. **Received Data Area** (QGroupBox with bold title)
    - QCheckBox "autoscroll" (enabled by default)
    - QCheckBox "byte" (for hex display)
+   - QCheckBox "show time" (display timestamp before each line)
    - QPushButton "Clear"
+   - QPushButton "Save to file"
    - QTextEdit (read-only, black background, white text)
 
-3. **Send Data Area** (QGroupBox with bold title)
+3. **Send Data Area** (QGroupBox with bold title, collapsible)
    - QTextEdit (black background, white text, height: 80px)
    - QCheckBox "send imm" (immediate send on typing)
-   - QCheckBox "send \r\n" (append newline, enabled by default)
+   - QCheckBox "send \n" (append newline, enabled by default)
    - QPushButton "Send"
    - QPushButton "Clear"
 
@@ -57,21 +59,38 @@
 5. **Immediate Send**: Send characters as they are typed
 6. **Auto-scroll**: Automatically scroll to bottom (toggleable)
 7. **Settings**: Persist settings between sessions (QSettings)
+8. **Line Ending Normalization**: Replace `\r\n` with `\n` in received text
+9. **Connection State Management**: Automatic UI reset on connection error
+
+### Connection State Machine
+| State | Refresh Button | Connect Button |
+|-------|---------------|----------------|
+| Disconnected | Enabled | Red, "Disconnected" |
+| Connecting | Disabled | Green, "Connected" |
+| Connection Error | Enabled | Red, "Disconnected" + refresh port list |
+| Disconnecting | Enabled | Red, "Disconnected" |
 
 ### User Interactions
 - Select COM port from dropdown
 - Set baud rate in text field
 - Click "Refresh" to update port list
-- Click "Connect" to connect to port
+- Click "Connect" to connect to port (disables Refresh)
 - Type data in send field
 - Click "Send" or enable "send imm" for immediate send
 - Toggle "byte" to display received data as hex
 - Toggle "autoscroll" for auto-scrolling
 - Click "info" to view program info
+- On connection error: UI auto-resets and refreshes port list
 
 ### Data Handling
 - Receive: Raw bytes, display as text or hex with "0x" prefix
 - Send: UTF-8 encoding, optional CRLF append
+- Line endings: `\r\n` normalized to `\n` in text mode
+
+### Error Handling
+- Invalid baud rate: Display error in received field
+- Serial port error: Display error, reset UI state, refresh port list
+- File save error: Show warning dialog
 
 ## Acceptance Criteria
 1. Application launches without errors
@@ -84,3 +103,6 @@
 8. Immediate send works on keypress
 9. Settings persist between sessions
 10. Info dialog shows version info
+11. Refresh button disabled when connected
+12. UI resets automatically on connection error
+13. `\r\n` replaced with `\n` in received text
