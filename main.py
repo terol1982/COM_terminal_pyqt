@@ -16,8 +16,8 @@ from PyQt6.QtCore import QThread, pyqtSignal, QSettings, Qt, QTime
 
 
 AUTHOR = "TerOl&MiniMaxM25"
-VERSION = "1.1.0"
-DATE = "2026-05-11"
+VERSION = "1.1.1"
+DATE = "2026-05-13"
 
 
 @dataclass
@@ -34,6 +34,7 @@ class AppSettings:
     time_show: bool = False
     send_imm: bool = False
     send_crlf: bool = True
+    nl_text: str = "\\n"
 
 
 class SerialReader(QThread):
@@ -101,6 +102,8 @@ class ComTerminal(QWidget):
         self.connect_btn.setStyleSheet("QPushButton { border: 1px solid gray; border-radius: 3px; padding:2px; }")
         self.connect_btn.setToolTip("Disconnected. Click to connect.")
 
+        self.status_indicator = QLabel("●")
+        self.status_indicator.setStyleSheet("QLabel { color: red; font-size: 25px; padding-top:0px; margin-top: -8px;}")
 
         port_layout.addWidget(QLabel("COM Port:"))
         port_layout.addWidget(self.port_combo)
@@ -108,6 +111,7 @@ class ComTerminal(QWidget):
         port_layout.addWidget(self.baud_edit)
         port_layout.addWidget(self.refresh_btn)
         port_layout.addWidget(self.connect_btn)
+        port_layout.addWidget(self.status_indicator)
         port_layout.addStretch()
 
         main_layout.addLayout(port_layout)
@@ -119,7 +123,8 @@ class ComTerminal(QWidget):
         self.autoscroll_check = QCheckBox("autoscroll")
         self.autoscroll_check.setChecked(True)
 
-        self.byte_check = QCheckBox("byte")
+        self.byte_check = QCheckBox("As Bytes")
+        self.byte_check.setToolTip("Show data as bytes")
         self.byte_check.setChecked(False)
 
         self.time_show_check = QCheckBox("show time")
@@ -169,11 +174,16 @@ class ComTerminal(QWidget):
         checkbox_layout = QHBoxLayout()
         self.send_imm_check = QCheckBox("send imm")
         self.send_imm_check.setToolTip("Send data immediately as you type")
-        self.send_crlf_check = QCheckBox("send \\n")
-        self.send_crlf_check.setToolTip("Send newline character when Send button is clicked")
+        self.send_crlf_check = QCheckBox("add new line symbol:")
+        self.send_crlf_check.setToolTip("Add newline character when Send button is clicked")
         self.send_crlf_check.setChecked(True)
+        self.nl_edit = QLineEdit("\\n")
+        self.nl_edit.setMaximumWidth(60)
+        self.nl_edit.setToolTip("Newline suffix (e.g. \\n, \\r\\n)")
         checkbox_layout.addWidget(self.send_imm_check)
         checkbox_layout.addWidget(self.send_crlf_check)
+        #checkbox_layout.addWidget(QLabel())
+        checkbox_layout.addWidget(self.nl_edit)
         checkbox_layout.addStretch()
 
         send_layout.addLayout(checkbox_layout)
@@ -215,12 +225,14 @@ class ComTerminal(QWidget):
             time_show=self.settings.value("time_show", False, type=bool),
             send_imm=self.settings.value("send_imm", False, type=bool),
             send_crlf=self.settings.value("send_crlf", True, type=bool),
+            nl_text=self.settings.value("nl_text", "\\n"),
         )
         self.baud_edit.setText(app_settings.baudrate)
         self.autoscroll_check.setChecked(app_settings.autoscroll)
         self.time_show_check.setChecked(app_settings.time_show)
         self.send_imm_check.setChecked(app_settings.send_imm)
         self.send_crlf_check.setChecked(app_settings.send_crlf)
+        self.nl_edit.setText(app_settings.nl_text)
 
     def save_settings(self) -> None:
         self.settings.setValue("baudrate", self.baud_edit.text())
@@ -228,11 +240,13 @@ class ComTerminal(QWidget):
         self.settings.setValue("time_show", self.time_show_check.isChecked())
         self.settings.setValue("send_imm", self.send_imm_check.isChecked())
         self.settings.setValue("send_crlf", self.send_crlf_check.isChecked())
+        self.settings.setValue("nl_text", self.nl_edit.text())
 
     def _toggle_send_group(self, checked: bool) -> None:
         self.send_edit.setVisible(checked)
         self.send_imm_check.setVisible(checked)
         self.send_crlf_check.setVisible(checked)
+        self.nl_edit.setVisible(checked)
         self.send_btn.setVisible(checked)
         self.clear_tx_btn.setVisible(checked)
 
@@ -283,13 +297,14 @@ class ComTerminal(QWidget):
             self.reader = SerialReader(port_name, baudrate)
             self.reader.data_received.connect(self.on_data_received)
             self.reader.start()
-            self.connect_btn.setText("Connected")
+            self.connect_btn.setText("Disconnect")
             self.connect_btn.setToolTip("Connected. Click to disconnect.")
-            self.connect_btn.setStyleSheet(
-                "QPushButton { background-color: green; color: white; border: 1px solid green; border-radius: 3px; padding:2px;}"
-                "QPushButton:hover { background-color: green; border: 2px solid green;}"
-            )
+            # self.connect_btn.setStyleSheet(
+            #     "QPushButton { background-color: green; color: white; border: 1px solid green; border-radius: 3px; padding:2px;}"
+            #     "QPushButton:hover { background-color: green; border: 2px solid green;}"
+            # )
             self.refresh_btn.setEnabled(False)
+            self.status_indicator.setStyleSheet("QLabel { color: green; font-size: 25px; padding-top:0px; margin-top: -8px;}")
         except ValueError as e:
             self.received_edit.insertPlainText(f"Error: Invalid baud rate: {e}\n")
         except serial.SerialException as e:
@@ -298,12 +313,13 @@ class ComTerminal(QWidget):
 
     def _reset_connect_state(self) -> None:
         self.reader = None
-        self.connect_btn.setText("Disconnected")
+        self.connect_btn.setText("Connect")
         self.connect_btn.setToolTip("Disconnected. Click to connect.")
-        self.connect_btn.setStyleSheet(
-            "QPushButton { background-color: red; color: white; border: 1px solid red; border-radius: 3px; padding:2px;}"
-            "QPushButton:hover { background-color: red; border: 2px solid red;}"
-        )
+        # self.connect_btn.setStyleSheet(
+        #     "QPushButton { background-color: red; color: white; border: 1px solid red; border-radius: 3px; padding:2px;}"
+        #     "QPushButton:hover { background-color: red; border: 2px solid red;}"
+        # )
+        self.status_indicator.setStyleSheet("QLabel { color: red; font-size: 25px; padding-top:0px; margin-top: -8px;}")
         self.refresh_btn.setEnabled(True)
         self.refresh_ports()
 
@@ -349,9 +365,8 @@ class ComTerminal(QWidget):
             return
 
         try:
-            data_bytes = data.encode('utf-8')
-            if self.send_crlf_check.isChecked():
-                data_bytes += b'\n'
+            nl_text = self.nl_edit.text().encode('utf-8').decode('unicode_escape').encode('latin-1')
+            data_bytes = data.encode('utf-8') + nl_text if self.send_crlf_check.isChecked() else data.encode('utf-8')
             self.reader.serial_port.write(data_bytes)
             self.reader.serial_port.flush()
         except serial.SerialException as e:
