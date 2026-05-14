@@ -1,4 +1,4 @@
-Script is written using LLM MiniMax M2.5
+COM port terminal writen on PyQT.
 
-#build command:
+#build command
 python -m PyInstaller --onefile -w --name COM_Terminal main.py

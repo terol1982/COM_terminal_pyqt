@@ -16,14 +16,16 @@ from PyQt6.QtCore import QThread, pyqtSignal, QSettings, Qt, QTime
 
 
 AUTHOR = "TerOl&MiniMaxM25"
-VERSION = "1.1.1"
-DATE = "2026-05-13"
+VERSION = "1.1.2"
+DATE = "2026-05-14"
+GIT = "https://github.com/terol1982/COM_terminal_pyqt"
 
 
 @dataclass
 class AppInfo:
     author: str = AUTHOR
     version: str = VERSION
+    GIT: str = GIT
     date: str = DATE
 
 
@@ -275,10 +277,15 @@ class ComTerminal(QWidget):
 
     def show_info(self) -> None:
         info = AppInfo()
-        QMessageBox.information(
-            self, "Info",
-            f"Author: {info.author}\nVersion: {info.version}\nDate: {info.date}"
+        msg_box = QMessageBox()
+        msg_box.setTextFormat(Qt.TextFormat.RichText)
+        msg_box.setText(
+            f"Author: {info.author}\n<br/>Version: {info.version}\n<br/>GitHub: <a href='{info.GIT}'>{info.GIT}</a>\n<br/>Date: {info.date}"
         )
+        msg_box.setWindowTitle("Info")
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg_box.exec()
+        
 
     def connect_port(self) -> None:
         port_name = self.port_combo.currentText()
